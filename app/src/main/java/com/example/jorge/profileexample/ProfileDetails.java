@@ -5,18 +5,22 @@ package com.example.jorge.profileexample;
  */
 
 
+    import android.content.Context;
     import android.os.Bundle;
     import android.support.v7.app.ActionBar;
-    import android.support.v7.app.ActionBarActivity;
     import android.support.v7.app.AppCompatActivity;
-    import android.text.Html;
     import android.widget.ImageView;
     import android.widget.TextView;
-    import com.squareup.picasso.Picasso;
+    import android.content.Intent;
+
+
 
     public class ProfileDetails extends AppCompatActivity {
-        private TextView titleTextView;
-        private ImageView imageView;
+        private TextView nameTextView;
+        private TextView messageTextView;
+        private TextView gpsTextView;
+        private ImageView photoView;
+        private Context mContext;
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
@@ -26,13 +30,35 @@ package com.example.jorge.profileexample;
             ActionBar actionBar = getSupportActionBar();
             actionBar.hide();
 
-            String title = getIntent().getStringExtra("title");
-            String image = getIntent().getStringExtra("image");
-            titleTextView = (TextView) findViewById(R.id.title);
-            imageView = (ImageView) findViewById(R.id.grid_item_image);
-            titleTextView.setText(Html.fromHtml(title));
+            // TODO: 2/12/15
+            /*
+            * No recoge la informacion enviada por el intent en los getStringExtra.
+            * Es enviada, sin embargo, correctamente desde MainActivity
+            */
 
-            Picasso.with(this).load(image).into(imageView);
+            Intent i = getIntent();
+            //Bundle extras = i.getExtras();
+            String name = i.getStringExtra("name");
+            String photo = i.getStringExtra("photo");
+            String message = i.getStringExtra("message");
+            String gps = i.getStringExtra("gps");
+
+            nameTextView = (TextView) findViewById(R.id.nameDetails);
+            messageTextView = (TextView) findViewById(R.id.messageDetails);
+            gpsTextView = (TextView) findViewById(R.id.gpsDetails);
+            photoView = (ImageView) findViewById(R.id.photoDetails);
+
+            nameTextView.setText(name);
+            messageTextView.setText(message);
+            gpsTextView.setText(gps);
+
+            // TODO: 2/12/15
+            /*
+            * Mismo problema que en GridViewAdapter
+            *
+            */
+            photoView.setBackgroundResource(R.drawable.jorge);
+
         }
     }
 

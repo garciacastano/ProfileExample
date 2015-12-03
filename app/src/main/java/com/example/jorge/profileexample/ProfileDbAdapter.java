@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.provider.BaseColumns;
 
 import java.sql.SQLException;
 
@@ -12,12 +13,9 @@ import java.sql.SQLException;
  * Created by jorge on 30/11/15.
  */
 
-public class ProfileDbAdapter {
+public class ProfileDbAdapter implements BaseColumns{
 
-    public static final String DATABASE_NAME = "profiles_db";
     private static final String TABLE_NAME = "profiles";
-    public static final int    DATABASE_VERSION = 1;
-
     public  static final String COL_NAME   = "name";
     public  static final String COL_MESSAGE = "message";
     public  static final String COL_ID = "_id";
@@ -29,12 +27,15 @@ public class ProfileDbAdapter {
     private SQLiteDatabase db;
 
     private static final String DATABASE_CREATE =
-            "create table " + TABLE_NAME + " (" +
-                    COL_ID     + " integer primary key autoincrement, " +
-                    COL_NAME   + " text not null, " +
-                    COL_MESSAGE   + " text not null, " +
-                    COL_PHOTO   + " text not null, " +
-                    COL_GPS   + " text not null); " ;
+            "create table " + ProfileDbAdapter.TABLE_NAME + " (" +
+                    ProfileDbAdapter.COL_ID     + " integer primary key autoincrement, " +
+                    ProfileDbAdapter.COL_NAME   + " text not null, " +
+                    ProfileDbAdapter.COL_MESSAGE   + " text not null, " +
+                    ProfileDbAdapter.COL_PHOTO   + " text not null, " +
+                    ProfileDbAdapter.COL_GPS   + " text not null); " ;
+
+    private static final String DATABASE_DELETE=
+        "DROP TABLE IF EXISTS "+ ProfileDbAdapter.TABLE_NAME;
 
     private final Context context;
 
@@ -76,8 +77,7 @@ public class ProfileDbAdapter {
         values.put(COL_NAME,   name);
         values.put(COL_MESSAGE,   message);
         values.put(COL_PHOTO,   photo);
-        values.put(COL_GPS,   gps);
-
+        values.put(COL_GPS, gps);
         return db.insert(TABLE_NAME, null, values);
     }
 
@@ -102,8 +102,9 @@ public class ProfileDbAdapter {
      * @return cursor over all products
      */
     public Cursor getAll() {
-        return db.query(TABLE_NAME,
-                new String[]{COL_ID, COL_NAME, COL_MESSAGE, COL_PHOTO, COL_GPS}, // selection
+        return db.query(
+                TABLE_NAME, //table name
+                new String[]{COL_ID, COL_NAME, COL_MESSAGE, COL_PHOTO, COL_GPS}, // columns
                 null, null, null, null, null);
     }
 
@@ -118,7 +119,7 @@ public class ProfileDbAdapter {
         Cursor cursor =
                 db.query(true,      // distinct
                         TABLE_NAME,
-                        new String[]{COL_ID, COL_NAME, COL_MESSAGE, COL_PHOTO, COL_GPS}, // select
+                        new String[]{COL_ID, COL_NAME, COL_MESSAGE, COL_PHOTO, COL_GPS}, // columns
                         COL_ID + "=" + id,                           // where
                         null, null, null, null, null);
         if (cursor != null) {
@@ -132,9 +133,13 @@ public class ProfileDbAdapter {
      */
     public void clear() {
         db.delete(TABLE_NAME, null, null);
+        open();
     }
 
     private static class DBHelper extends SQLiteOpenHelper {
+
+        public static final String DATABASE_NAME = "Profiles.db";
+        public static final int    DATABASE_VERSION = 1;
 
         DBHelper(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -147,8 +152,13 @@ public class ProfileDbAdapter {
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+            db.execSQL(DATABASE_DELETE);
             onCreate(db);
+        }
+
+        @Override
+        public void onDowngrade (SQLiteDatabase db, int oldVersion, int newVersion) {
+            onUpgrade(db, oldVersion, newVersion);
         }
     }
 }

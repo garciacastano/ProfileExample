@@ -1,11 +1,8 @@
 package com.example.jorge.profileexample;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.sql.SQLException;
 import java.util.ArrayList;
-import android.os.AsyncTask;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
@@ -13,43 +10,42 @@ import android.util.Log;
 import android.view.View;
 import android.widget.GridView;
 import android.widget.AdapterView;
-import android.widget.ProgressBar;
-import android.widget.Toast;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+
+/**
+ * Main class of the application *
+ * @author Jorge García, Javier Gonzalez *
+ */
 
 public class MainActivity extends AppCompatActivity {
+
     private static final String TAG = MainActivity.class.getSimpleName();
     private GridView mGridView;
-    private ProgressBar mProgressBar;
     private GridViewAdapter mGridAdapter;
-    private ArrayList<GridItem> mGridData;
-    private String FEED_URL = "http://javatechig.com/?json=get_recent_posts&count=45";
+    private ArrayList<Profile> mGridData;
+    private ProfileDbAdapter dbAdapter;
+    private Cursor cursor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "ON CREATE");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.profile_list);
 
         mGridView = (GridView) findViewById(R.id.profile_grid);
-        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-
         mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-
+                Log.d(TAG, "CLICK DETAILS");
                 //Get item at position
-                GridItem item = (GridItem) parent.getItemAtPosition(position);
+                Profile item = (Profile) parent.getItemAtPosition(position);
+                if(item.getGps()==null || item.getMessage()==null){
+                    item=downloadDetails(item, position);
+                }
 
-                //Pass the image title and url to DetailsActivity
                 Intent intent = new Intent(MainActivity.this, ProfileDetails.class);
-                intent.putExtra("title", item.getTitle());
-                intent.putExtra("image", item.getImage());
-
+                intent.putExtra(item.getName(), "name");
+                intent.putExtra(item.getPhoto(), "photo");
+                intent.putExtra(item.getGps(), "gps");
+                intent.putExtra(item.getMessage(), "message");
                 //Start details activity
                 startActivity(intent);
             }
@@ -60,90 +56,56 @@ public class MainActivity extends AppCompatActivity {
         mGridAdapter = new GridViewAdapter(this, R.layout.profile_cell, mGridData);
         mGridView.setAdapter(mGridAdapter);
 
-        //Start download
-        new AsyncHttpTask().execute(FEED_URL);
-        mProgressBar.setVisibility(View.VISIBLE);
+        dbAdapter = new ProfileDbAdapter(this);
+        dbAdapter.open();
+        dbAdapter.clear();
+
+        //Examples
+        loadExamples();
+        downloadPreviews();
+
     }
 
-    //Downloading data asynchronously
-    public class AsyncHttpTask extends AsyncTask<String, Void, Integer> {
+    private void downloadPreviews() {
+        Log.d(TAG, "DOWNLOAD PREVIEWS");
+        cursor = dbAdapter.getAll();
 
-        @Override
-        protected Integer doInBackground(String... params) {
-            Integer result = 0;
-            try {
-                // Create Apache HttpClient
-                HttpClient httpclient = new DefaultHttpClient();
-                HttpResponse httpResponse = httpclient.execute(new HttpGet(params[0]));
-                int statusCode = httpResponse.getStatusLine().getStatusCode();
-
-                // 200 represents HTTP OK
-                if (statusCode == 200) {
-                    String response = streamToString(httpResponse.getEntity().getContent());
-                    parseResult(response);
-                    result = 1; // Successful
-                } else {
-                    result = 0; //"Failed
-                }
-            } catch (Exception e) {
-                Log.d(TAG, e.getLocalizedMessage());
-            }
-            return result;
+        Log.d("Número de perfiles = ", Integer.toString(cursor.getCount()));
+        //Log.d("Número de parámetros = ", Integer.toString(cursor.getColumnCount()));
+        while(cursor.moveToNext()){
+            long id = Long.parseLong(cursor.getString(cursor.getColumnIndex(ProfileDbAdapter.COL_ID)));
+            String name = cursor.getString(cursor.getColumnIndex(ProfileDbAdapter.COL_NAME));
+            Log.d(TAG, name);
+            String photo = cursor.getString(cursor.getColumnIndex(ProfileDbAdapter.COL_PHOTO));
+            mGridData.add(new Profile(id, name, photo));
         }
-
-        @Override
-        protected void onPostExecute(Integer result) {
-            // Download complete. Let us update UI
-            if (result == 1) {
-                mGridAdapter.setGridData(mGridData);
-            } else {
-                Toast.makeText(MainActivity.this, "Failed to fetch data!", Toast.LENGTH_SHORT).show();
-            }
-            mProgressBar.setVisibility(View.GONE);
-        }
+        mGridAdapter.setGridData(mGridData);
     }
 
-    String streamToString(InputStream stream) throws IOException {
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream));
-        String line;
-        String result = "";
-        while ((line = bufferedReader.readLine()) != null) {
-            result += line;
+    private Profile downloadDetails(Profile item, int position) {
+        Log.d(TAG, "DOWNLOAD DETAILS");
+        try{
+            cursor = dbAdapter.get(item.getId());
+        }
+        catch (SQLException e){
+            Log.d(TAG, "ERROR DOWNLOADING DETAILS");
         }
 
-        // Close stream
-        if (null != stream) {
-            stream.close();
-        }
-        return result;
+        String message = cursor.getString(cursor.getColumnIndex(ProfileDbAdapter.COL_MESSAGE));
+        String gps = cursor.getString(cursor.getColumnIndex(ProfileDbAdapter.COL_GPS));
+        item.setMessage(message);
+        item.setGps(gps);
+        mGridData.set(position, item);
+
+        mGridAdapter.setGridData(mGridData);
+        return item;
     }
 
-    /**
-     * Parsing the feed results and get the list
-     * @param result
-     */
-    private void parseResult(String result) {
-        try {
-            JSONObject response = new JSONObject(result);
-            JSONArray posts = response.optJSONArray("posts");
-            GridItem item;
-            for (int i = 0; i < posts.length(); i++) {
-                JSONObject post = posts.optJSONObject(i);
-                String title = post.optString("title");
-                item = new GridItem();
-                item.setTitle(title);
-                JSONArray attachments = post.getJSONArray("attachments");
-                if (null != attachments && attachments.length() > 0) {
-                    JSONObject attachment = attachments.getJSONObject(0);
-                    if (attachment != null)
-                        item.setImage(attachment.getString("url"));
-                }
-                mGridData.add(item);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+    private void loadExamples() {
+        Log.d(TAG, "LOAD EXAMPLES");
+        dbAdapter.add("Jorge", "21 años", "jorge", "Madrid");
+        dbAdapter.add("Javi", "21 años", "javi", "Galicia");
+        dbAdapter.add("Cris", "21 años", "cris","Santander");
+        dbAdapter.add("Eva", "20 años", "eva","Extremadura");
     }
-
-
 }

@@ -5,20 +5,41 @@
     android:background="#000"
     android:orientation="vertical">
 
-    <ImageView
-        android:id="@+id/grid_item_image"
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:scaleType="fitCenter" />
+        android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="#00000c"
-        android:padding="10dp"
-        android:textColor="#fff"
-        android:textSize="20dp" />
+        <com.example.jorge.profileexample.SquareImageView
+            android:id="@+id/photoDetails"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/nameDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#00000c"
+            android:textColor="#fff"
+            android:textSize="20dp"
+            android:padding="10dp"
+            android:layout_gravity="bottom" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/messageDetails"
+            android:layout_gravity="bottom"
+            android:layout_below="@+id/nameDetails"
+            android:padding="10dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/gpsDetails"
+            android:layout_gravity="bottom"
+            android:layout_below="@+id/messageDetails"/>
+
+    </LinearLayout>
+
 </FrameLayout>
